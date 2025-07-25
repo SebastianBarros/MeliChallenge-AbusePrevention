@@ -62,9 +62,9 @@ Implementar un nuevo paso en el checkout*como una **página intermedia** (`/pre-
    * Mediante la utilización de SSR, el servidor ya ha fetcheado la data necesaria y construido la pantalla para que el front-end sólo deba renderizarla. De esta manera se logra un único loading reduciendo al máximo los tiempos de espera (se asume que las api indicadas más arriba responden en tiempos que permitan lograr nuestro objetivo).
    * Para la gestión del Captcha se sugiere reCAPTCHA v2 ofrecido por google. En este punto podemos tomar 2 approachs:
      * 1. Utilizar casilla de verificación "No soy un robot" la cual sólo requiere un click del usuario y no pide resolver puzles ni otras verificaciones. El punto a favor de esta solución es que puede ser montado desde el lado del servidor junto al resto de la página, por lo que se renderiza instantáneamente. De la misma forma, este captcha necesita interacción del usuario (hacer click), por lo cual en el mejor de los casos estamos pidiendo 2 inputs al usuario: 1. resolver el captcha, 2. click en "continuar".
-    >![captcha casilla](image.png)
+    >![captcha casilla](https://developers.google.com/static/recaptcha/images/newCaptchaAnchor.gif?hl=es-419)
      * 2. Utilizar la verificación de reCAPTCHA invisible. La ventaja de este captcha es que no requiere una interacción directa del usuario (a menos que se detecte tráfico sospechoso), sino que el mismo FE puede disparar una request de verificación ya sea en un first-load o cuando hace click en "continuar", reduciendo así la cantidad de acciones que debe realizar el usuario. La contra de este mecanismo es que, si bien corto, agregamos una request y un loading a la pantalla. A priori esto va en contra de los requerimientos, pero el trade-off loading vs input del usuario puede ser interesante para discutir con el equipo de producto y UX.
-    >![captcha invisible](image-1.png)
+    >![captcha invisible](https://developers.google.com/static/recaptcha/images/invisible_badge.png?hl=es-419)
    * Mostrar los botones tanto de continuar como de volver hacia atrás, realizando cada uno la redirección correspondiente manteniendo los query params `token` y `referrer`.
 
 #### Componentización/Armado de la pantalla
