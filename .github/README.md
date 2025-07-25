@@ -41,7 +41,7 @@ Se necesita una pantalla de pre-confirmación donde los usuarios puedan revisar 
 
 ### A gran escala
 
-Implementar un nuevo paso en el checkout*como una **página intermedia** (`/pre-confirmation`) que:
+Implementar un nuevo paso en el checkout como una **página intermedia** (`/pre-confirmation`) que:
 
 * Se monta como un microfrontend utilizando React y TypeScript.
 * El servidor express donde estará montado ya existe, debe agregarse la ruta nueva.
@@ -58,7 +58,7 @@ Implementar un nuevo paso en el checkout*como una **página intermedia** (`/pre-
 
 1. Al montar la página:
 
-   * Leer `referrer` y `token` de la URL. Estos datos se enviarán al BE en caso de que sea necesario algún tipo de tracking extra (i.e. herramientas como Amplitude).
+   * Leer `referrer` y `token` de la URL. Estos datos se enviarán al BE en caso de que sea necesario algún tipo de tracking extra (i.e. herramientas como Amplitude) y para auth.
    * Mediante la utilización de SSR, el servidor ya ha fetcheado la data necesaria y construido la pantalla para que el front-end sólo deba renderizarla. De esta manera se logra un único loading reduciendo al máximo los tiempos de espera (se asume que las api indicadas más arriba responden en tiempos que permitan lograr nuestro objetivo).
    * Para la gestión del Captcha se sugiere reCAPTCHA v2 ofrecido por google. En este punto podemos tomar 2 approachs:
      * 1. Utilizar casilla de verificación "No soy un robot" la cual sólo requiere un click del usuario y no pide resolver puzles ni otras verificaciones. El punto a favor de esta solución es que puede ser montado desde el lado del servidor junto al resto de la página, por lo que se renderiza instantáneamente. De la misma forma, este captcha necesita interacción del usuario (hacer click), por lo cual en el mejor de los casos estamos pidiendo 2 inputs al usuario: 1. resolver el captcha, 2. click en "continuar".
@@ -69,7 +69,7 @@ Implementar un nuevo paso en el checkout*como una **página intermedia** (`/pre-
 
 #### Componentización/Armado de la pantalla
 
-A nivel pantalla (casi rozando el código) se proponen 2 alternativas:
+A nivel programación de la pantalla se proponen 2 alternativas:
 
 1. Manejar todo el formulario en un mismo componente que recibe la data fetcheada a partir de un contexto, teniendo los 3 inputs sugeridos (fullname, country y address) en el mismo archivo.
    * Pros:
@@ -90,14 +90,14 @@ A nivel pantalla (casi rozando el código) se proponen 2 alternativas:
 
 #### 🎨 A nivel UI
 
-* Layout responsive (se sugiere flexblox).
+* Layout responsive (se sugiere utilizar flex).
 * Encarar el desarrollo utilizando la estrategia mobile-first.
 * Cronometrar los tiempos de la pantalla (definir un máximo aceptable)
 * Nunca bloquear la UI (loadings en particular).
 * Reducir las animaciones al mínimo.
 * Utilizar componentes ya definidos en el Design System de Mercado Libre (la única lib externa requerida debería ser reCAPTCHA v2)
   * Se asume que los componentes requeridos para esta pantalla se encuentran en el design system.
-* Utilizar un dropdown de países que muestre tanto el nombre como bandera. El mismo debe funcionar sin trabarse por más que sean muchos países/imágenes a renderizar.
+    * Utilizar un dropdown de países que muestre tanto el nombre como bandera. El mismo debe funcionar sin trabarse por más que sean muchos países/imágenes a renderizar.
 
 ### 2.1.1 Otras consideraciones
 
@@ -117,20 +117,20 @@ Siendo Mercado Libre una empresa con diferentes productos, no podemos descartar 
   * Debe verificar que los query params `token` y `referrer` estén presentes. Los mismos ya deberían estar sanitizados por pasos previos, pero debería haber un middleware que se encargue de checkearlos.
   * Sirve el HTML + la App de react ya hidratada, de forma que no deban hacerse queries client-side.
   * Verificación de headers de seguridad, CORS y validación de token/Bearers.
-  * Será necesario un nuevo endpoint de validación del captcha. El mismo debe realizar una query a la API de Google utilizando el valor proporcionado por el frontend así como la secret KEY que debe vivir como variable de entorno en el backend.
+  * Creación de un endpoint de submit (ir al paso siguiente). El mismo debe realizar una query a la API de Google utilizando el valor proporcionado por el frontend así como la secret KEY que debe vivir como variable de entorno en el backend.
 
 ---
 
 ## 3. Internacionalización (i18n)
 
-* El idioma debe ser  por dominio (ej. `.com.ar`, `.com.br`). A partir de este dominio el backend hidrará los textos de la pantalla en función del idioma: esto es, para reducir los tiempos de carga del front, el mismo no debería incluir los JSONs con las traducciones, sino que estas deberían vivir a nivel backend y sólo servir las respectivas a ese dominio.
+* El idioma debe ser  por dominio (ej. `.com.ar`, `.com.br`). A partir de este dominio el backend hidratará los textos de la pantalla en función del idioma: esto es, para reducir los tiempos de carga del front, el mismo no debería incluir los JSONs con las traducciones, sino que estas deberían vivir a nivel backend y sólo servir las respectivas a ese dominio.
 * En caso de que con el dominio no alcance para obtener el código de país referente a la traducción necesaria, se podría utilizar la api de meli-countries para obtener el código de país.
 
 ---
 
 ## 4. Performance
 
-* Se utilizará una arquitectura SSR donde la única query dispara por el frontend debe ser para continuar al paso siguiente.
+* Se utilizará una arquitectura SSR donde la única query dispara por el frontend (aparte del first-load) debe ser para continuar al paso siguiente.
 * El captcha debería venir precargado desde el backend, pero en caso de que la biblioteca de google realice alguna query de inicialización, se debe utilizar el fallback correspondiente.
 * Los datos han de ser hidratados por el backend al momento de entrar a la pantalla.
 * Se deben realizar verficaciones de Lighthouse para garantizar un alto score.
@@ -164,6 +164,7 @@ Siendo Mercado Libre una empresa con diferentes productos, no podemos descartar 
 ## Fin del flujo
 
 * Se deben enviar los datos modificados al backend, el código de captcha para la verificación y los query params `referrer` y `token`.
+* El backend debe redirigir al step siguiente del flujo de compras.
 
 ---
 
@@ -171,11 +172,6 @@ Siendo Mercado Libre una empresa con diferentes productos, no podemos descartar 
 
 ```
 /src
-  /components
-    AddressSummary.tsx
-    UserInfoSummary.tsx
-    CaptchaVerifier.tsx
-    ConfirmButton.tsx
   /hooks
     usePreConfirmationContext.ts
   /contexts
@@ -183,6 +179,11 @@ Siendo Mercado Libre una empresa con diferentes productos, no podemos descartar 
     PreConfirmationProvidet.tsx
   /pages
     PreConfirmationCheck.tsx
+    /components
+        AddressSummary.tsx
+        UserInfoSummary.tsx
+        CaptchaVerifier.tsx
+        ConfirmButton.tsx
   index.tsx
 /server
   routes.ts
