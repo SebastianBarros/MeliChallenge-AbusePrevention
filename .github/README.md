@@ -13,7 +13,7 @@ Se necesita una pantalla de pre-confirmación donde los usuarios puedan revisar 
 ###  1.1 Requisitos
 
 * La página debe cargar lo antes posible y sólo poseer un loading (i.e., no cargar diferentes componentes por separado).
-* El captcha debe cargarse y validarse instantáneamente (i.e., no utilizar selectores de imágenes)
+* El captcha debe cargarse y validarse con un solo click (i.e., no utilizar selectores de imágenes)
 * Simplicidad de UX.
 * Diseño responsive.
 * Evitar que el usuario vuelva a cargar información ya cargada.
@@ -24,8 +24,8 @@ Se necesita una pantalla de pre-confirmación donde los usuarios puedan revisar 
 * La página debe implementarse utilizando typescript y reutilizando estructuras y tipos preexistentes.
 * Debe utilizarse React (o vanilla en el caso de no-script, se detallará más adelante).
 * Diseño mobile-first.
-* Debe conservar los query params (referrer y token) para enviarlos a la página siguiente.
-* No debe ser disruptivo en el flujo ya existente (no tocar página anterior ni siguiente).
+* Debe conservar los query params (referrer y token) para enviarlos al paso siguiente.
+* No debe ser disruptivo en el flujo ya existente (no tocar paso anterior ni siguiente).
 
 ### 1.3 Herramientas
 
@@ -84,9 +84,9 @@ A nivel programación de la pantalla se proponen 2 alternativas:
 2. Manejar un componente padre que sólo se encargue del state del form y la acción de submit. Luego, renderiza distintos componentes que tienen diferentes responsabilidades. Los componentes obtienen la información de un contexto general de esta página, **no** reciben la data como prop.
 
     * `UserInfo`: muestra los datos del usuario y permite editarlos si necesario. Hoy en día se requiere el nombre completo, pero eventualmente podríamos agregar DNI/ID u otras opciones.
-    * `Address`: muestra la información de la dirección del usuario. Se sugiere un único campo de texto con la dirección ya parseada del usuario y no diferentes inputs para seleccionar calle, altura, nro de dpto, etc. Desglozar tanto la dirección provocaría que el usuario tarde más de lo buscado en este paso. En caso de este campo sufrir modificaciones, el BE podría desglozar la dirección con ayuda de una IA para luego almacenar los campos por separado.
-    * `CaptchaVerifier`: componente aislado para carga y verificación. Es importante aislarlo del formulario principal para no crear dependencias muy estrechas con la biblioteca a utilizar.
-    * `ConfirmButton`: Renderizado de los botones "atrás" y "continuar", recibiendo los callbacks del componente padre. Debe poder leer el state del form y habilitarse/deshabilitarse en consecuencia.
+    * `LocationInfo`: muestra la información de la dirección del usuario. Se sugiere un único campo de texto con la dirección ya parseada del usuario y no diferentes inputs para seleccionar calle, altura, nro de dpto, etc. Desglozar tanto la dirección provocaría que el usuario tarde más de lo buscado en este paso. En caso de este campo sufrir modificaciones, el BE podría desglozar la dirección con ayuda de una IA para luego almacenar los campos por separado.
+    * `Captcha`: componente aislado para carga y verificación. Es importante aislarlo del formulario principal para no crear dependencias muy estrechas con la biblioteca a utilizar.
+    * `CTAs`: Renderizado de los botones "atrás" y "continuar", recibiendo los callbacks del componente padre. Debe poder leer el state del form y habilitarse/deshabilitarse en consecuencia.
 
 #### 🎨 A nivel UI
 
@@ -130,7 +130,7 @@ Siendo Mercado Libre una empresa con diferentes productos, no podemos descartar 
 
 ## 4. Performance
 
-* Se utilizará una arquitectura SSR donde la única query dispara por el frontend (aparte del first-load) debe ser para continuar al paso siguiente.
+* Se utilizará una arquitectura SSR donde la única query disparada por el frontend (aparte del first-load) debe ser para continuar al paso siguiente.
 * El captcha debería venir precargado desde el backend, pero en caso de que la biblioteca de google realice alguna query de inicialización, se debe utilizar el fallback correspondiente.
 * Los datos han de ser hidratados por el backend al momento de entrar a la pantalla.
 * Se deben realizar verficaciones de Lighthouse para garantizar un alto score.
@@ -165,30 +165,103 @@ Siendo Mercado Libre una empresa con diferentes productos, no podemos descartar 
 
 * Se deben enviar los datos modificados al backend, el código de captcha para la verificación y los query params `referrer` y `token`.
 * El backend debe redirigir al step siguiente del flujo de compras.
+* En caso de haberse realizado modificaciones a los campos, el backend debe persistir estos cambios de forma asíncrona para no introducir tiempos de espera extra en el flujo.
 
 ---
 
-## Posible estructura de carpetas para una POC.
+## POC y su estructura
 
+A fines demostrativos y para estimación (encontrada al final del documento) se diseñó una simple POC con Vite para el frontend y Express para el backend. \
+En la misma podemos apreciar un aproximado a la experiencia utilizando SSR y una implementación realista del reCAPTCHA v2. 
+Tanto los tiempos de carga de la página de pre-confirmación como los tiempos de validación del captcha entran en los parámetros del requerimiento y no afectan casi a la experiencia del usuario.
+
+### Elementos que contiene la POC:
+* SSR con la data mockeada en el servidor.
+* Validación real del captcha ingresado.
+* Estilos, componentes y librerías basados en las tecnologías más reconocidas del mercado.
+* Manejo de URL gestionada en el Frontend (url del browser) en función del backend.
+
+### Elementos que quedan fueran del Scope de esta POC (ya que no aportan a experimentación de los tiempos de respuesta):
+* UI para la gestión de errores. Si bien los errores están manejados, la UI informativa es ínfima.
+* Unit tests y E2E. 
+* Fetcheo real de información en APIs.
+* Internacionalización. Si bien esto agrega más payload y tamaño al bundle de la página, lo tomamos como insignificante para esta POC, aunque su gestión y medición debe realizarse una vez implementado.
+
+### ¿Cómo correr la POC localmente?
+
+1. Clonar el repositorio utilizando git.
+2. Asegurarse de tener node y npm instalados en el dispositivo.
+3. Crear un archivo .env a partir del archivo .env.example
+   1. Las keys públicas y privadas para utilizar los servicios de reCAPTCHA de google pueden ser obtenidas registrando una app en [Google reCAPTCHA](https://www.google.com/recaptcha/admin/create). Se debe seleccionar la opción Desafío (v2) con casilla de verificación "No soy un robot". Ingresar en el dominio la url de localhost, o en su defecto la verificación de dominio puede ser desactivada dentro del panel de administración del proyecto.
+4. Correr `npm install`
+5. Buildear el frontend corriendo el comando `npm run build`
+6. Correr el backend con el comando `npm run dev` (por default se levanta en el puerto 3000).
+7. Ingresar a la [URL del proyecto](http://localhost:3000/pre-confirmation?referrer=/checkout&token=123)
+   
+Ante cualquier problema al levantar el proyecto, enviar un correo a [Email ✉️](sebastianbarros1995@gmail.com) y trataré de asistirlo a la brevedad.
+
+---
+### Estructura de carpetas de la POC
 ```
-/src
-  /hooks
-    usePreConfirmationContext.ts
-  /contexts
-    PreConfirmationContext.ts
-    PreConfirmationProvidet.tsx
+/.github
+  README.md
+/public imágenes
+/src aquí se encuentra el código del front del proyecto
+  /assets
+    ml-logo.svg
+  /components
+    /ui compoentes creados por SHADCN, haciendo las veces de desing system
+      Button.tsx
+      Input.tsx
+    Captcha.tsx
+    Header.tsx
   /pages
-    PreConfirmationCheck.tsx
-    /components
-        AddressSummary.tsx
-        UserInfoSummary.tsx
-        CaptchaVerifier.tsx
-        ConfirmButton.tsx
-  index.tsx
-/server
-  routes.ts
-  captchaVerify.ts
-/i18n
-  es.json
-  pt.json
+    /Confirmation 
+      Confirmation.tsx 
+    /PreConfirmation.tsx 
+      PreConfirmationCheck.tsx
+      index.ts
+      /components
+          CTAs.tsx
+          LocationInfo.tsx
+          UserInfo.tsx
+      /Context
+        PreConfirmationContext.ts
+        PreConfirmationProvider.tsx
+      /Hooks
+        usePreConfirmationContext.ts
+      index.tsx
+  /services
+    preConfirmationSubmit.ts
+/server código del backend
+  /controllers
+    confirmation.ts
+    pre-confirmation.ts
+  /utils
+    validateCaptcha.ts
+  app.ts
+  config.ts
+  router.ts
+  server.ts
 ```
+---
+### 6. Diagrama de secuencia
+---
+Se adjunta el diagrama de secuencia del Happy Path, acorde al comportamiento del código y de la solución planteada.
+
+[Link al diagrama](https://drive.google.com/file/d/1rFY8ndY9r8G2byx4wUBSSz_VNj4w_ysU/view?usp=sharing)
+
+![diagrama imagen](https://i.imgur.com/rfke2eA.jpeg)
+
+---
+
+### 7. Estimación y conclusiones
+
+Luego de realizar el análisis del problema y la solución, concluimos en que es totalmente viable realizar el cambio en el flujo de compras sin comprometer la experiencia de usuario y haciendo más robusta la seguridad para el mismo. \
+A partir de este análisis y la creación de la POC y teniendo en cuenta la criticidad del flujo, se estimarían no menos de dos semanas de desarrollo, asignando al menos una semana a la realización de pruebas.
+Esto es, una semana dedicada a la codificación y la creación de pruebas unitarias, E2E y de regresión (con al menos 2 recursos avocados 100% del tiempo a esta iniciativa, uno para el back y otro para el front)* y otra semana dedicada exclusivamente a pruebas de QA no sólo en este equipo si no en todos los equipos que se vean afectados por cambios en el flujo de compra. \
+Finalmente, se propone realizar un deploy progresivo de este cambio para poder obtener más información y métricas de cómo afecta a los usuarios (con el objetivo de mejorar el user journey) y también de disminuir el riesgo que implica un cambio potencialmente bloqueante en el flujo de compras. 
+
+\* Asumimos que los endpoints de las API ya existen y devuelven la data que necesitamos
+
+

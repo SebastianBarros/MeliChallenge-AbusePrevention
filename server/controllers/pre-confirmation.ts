@@ -14,6 +14,8 @@ export const preConfirmationController = (req: Request, res: Response) => {
     return res.status(400).send("Invalid token");
   }
 
+  // validate token
+
   const html = `
     <!DOCTYPE html>
     <html lang="es">
@@ -61,11 +63,15 @@ export const submitPreConfirmationController = async (
     return res.status(400).json({ error: "invalid data" });
   }
 
-  const isValidToken = await validateCaptcha(captcha);
+  // validate token
 
-  if (!isValidToken) {
+  const isValidCaptcha = await validateCaptcha(captcha);
+
+  if (!isValidCaptcha) {
     return res.status(400).json({ error: "invalid data" });
   }
+
+  // update contact data if needed. It can be done async so we don't block our curstomer purchase
 
   const redirectTo = `/confirmation?referrer=${encodeURIComponent(
     referrer
