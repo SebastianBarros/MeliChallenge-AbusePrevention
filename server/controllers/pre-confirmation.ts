@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { validateCaptcha } from "../utils/validateCaptcha";
+import { validateCaptcha } from "../services/validateCaptcha";
 
 const mockUserData = {
   name: "Juan Pérez",
@@ -16,6 +16,7 @@ export const preConfirmationController = (req: Request, res: Response) => {
 
   // validate token
 
+  /** This is not the proper nor most secure way to pass props, but for a POC will do */
   const html = `
     <!DOCTYPE html>
     <html lang="es">
